@@ -41,6 +41,8 @@ jobs:
           cd istoreos-imagebuilder-armsr-armv8.Linux-x86_64
           echo "生成rootfs.tar.gz配置"
           sed -i 's/# CONFIG_TARGET_ROOTFS_TARGZ is not set/CONFIG_TARGET_ROOTFS_TARGZ=y/' .config
+          ls -l
+          pwd
 
 
 
