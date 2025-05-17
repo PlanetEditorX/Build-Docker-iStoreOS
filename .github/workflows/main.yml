@@ -48,6 +48,7 @@ jobs:
 
       - name: 安装工具
         run: |
+          sudo apt update
           sudo apt install build-essential \
                 gawk \
                 unzip \
