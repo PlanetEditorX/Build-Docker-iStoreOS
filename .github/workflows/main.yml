@@ -44,7 +44,7 @@ jobs:
           ls -l
           pwd
           echo "复制配置文件"
-          cp -r ./src/arm/* ./
+          cp -r ../src/arm/* ./
 
       - name: 安装工具
         run: |
