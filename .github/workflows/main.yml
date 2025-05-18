@@ -141,20 +141,20 @@ jobs:
           cd istoreos-imagebuilder-armsr-armv8.Linux-x86_64
           make image PROFILE=generic PACKAGES="luci luci-i18n-homeproxy-zh-cn luci-i18n-passwall-zh-cn iptables iptables-mod-tproxy iptables-mod-socket iptables-mod-iprange iptables-mod-conntrack-extra kmod-ipt-nat kmod-nft-socket kmod-nft-tproxy hysteria sing-box geoview xray-core luci-app-openclash luci-i18n-firewall-zh-cn luci-app-filetransfer luci-i18n-linkease-zh-cn luci-i18n-base-zh-cn luci-i18n-ttyd-zh-cn luci-i18n-package-manager-zh-cn luci-i18n-argon-zh-cn luci-theme-argon luci-i18n-argon-config-zh-cn luci-i18n-quickstart-zh-cn luci-i18n-diskman-zh-cn -libustream-mbedtls" FILES="files"
 
-      - name: Download and Extract RootFS
+      - name: 解压RootFS包
         run: |
           mkdir -p ./iStoreOS/
           mv ./istoreos-imagebuilder-armsr-armv8.Linux-x86_64/bin/targets/armsr/armv8/istoreos-armsr-armv8-generic-rootfs.tar.gz ./iStoreOS/rootfs_arm64.tar.gz
           gzip -d ./iStoreOS/rootfs_arm64.tar.gz
 
-      - name: Move rootfs.tar.gz to build context
+      - name: 移动到构建目录
         run: |
-          mkdir -p ./src/amd64 ./src/arm64
-          mv ./iStoreOS/rootfs_arm64.tar ./src/arm64/rootfs.tar
+          mkdir -p ./src/armsr-armv8
+          mv ./iStoreOS/rootfs_arm64.tar ./src/armsr-armv8/rootfs.tar
 
-      - name: Build Dockerfile
+      - name: 创建Dockerfile文件
         run: |
-          cat <<EOF >"./src/arm64/Dockerfile"
+          cat <<EOF >"./src/armsr-armv8/Dockerfile"
           FROM scratch
           ADD rootfs.tar /
           EOF
@@ -163,8 +163,8 @@ jobs:
         id: build
         uses: docker/build-push-action@v4
         with:
-          context: ./src/arm64
-          file: ./src/arm64/Dockerfile
+          context: ./src/armsr-armv8
+          file: ./src/armsr-armv8/Dockerfile
           platforms: linux/arm64
           tags: |
             yexundao/istoreos:${{ steps.final_tags.outputs.tags }}
