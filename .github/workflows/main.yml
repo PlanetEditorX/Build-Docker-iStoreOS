@@ -22,6 +22,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+        include:
+          - platform: linux/amd64
+            dockerfile: ./src/amd64/Dockerfile
+            platform_name: x86-64
+          - platform: linux/arm64
+            dockerfile: ./src/arm64/Dockerfile
+            platform_name: armsr-armv8
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -91,20 +101,18 @@ jobs:
 
       - name: 下载构建文件
         run: |
-          wget https://fw0.koolcenter.com/iStoreOS/alpha/24.10/ib/armsr/istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst
+          echo "下载文件"
+          wget https://fw0.koolcenter.com/iStoreOS/alpha/24.10/ib/${{ matrix.platform_name }}/istoreos-imagebuilder-${{ matrix.platform_name }}.Linux-x86_64.tar.zst
           echo "解压文件"
-          zstd -d -c istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst | tar -xvf -
-          # wget https://fw0.koolcenter.com/iStoreOS/alpha/24.10/ib/x86_64/istoreos-imagebuilder-x86-64.Linux-x86_64.tar.zst
+          zstd -d -c istoreos-imagebuilder-${{ matrix.platform_name }}.Linux-x86_64.tar.zst | tar -xvf -
 
       - name: 设置文件
         run: |
-          cd istoreos-imagebuilder-armsr-armv8.Linux-x86_64
+          cd istoreos-imagebuilder-${{ matrix.platform_name }}.Linux-x86_64
           echo "生成rootfs.tar.gz配置"
           sed -i 's/# CONFIG_TARGET_ROOTFS_TARGZ is not set/CONFIG_TARGET_ROOTFS_TARGZ=y/' .config
-          ls -l
-          pwd
           echo "复制配置文件"
-          cp -r ../src/arm/* ./
+          cp -r ../src/${{ matrix.platform_name }}/* ./
 
       - name: 安装工具
         run: |
@@ -126,35 +134,31 @@ jobs:
 
       - name: 构建rootfs文件
         run: |
-          cd istoreos-imagebuilder-armsr-armv8.Linux-x86_64
+          cd istoreos-imagebuilder-${{ matrix.platform_name }}.Linux-x86_64
           make image PROFILE=generic PACKAGES="luci luci-i18n-homeproxy-zh-cn luci-i18n-passwall-zh-cn iptables iptables-mod-tproxy iptables-mod-socket iptables-mod-iprange iptables-mod-conntrack-extra kmod-ipt-nat kmod-nft-socket kmod-nft-tproxy hysteria sing-box geoview xray-core luci-app-openclash luci-i18n-firewall-zh-cn luci-app-filetransfer luci-i18n-linkease-zh-cn luci-i18n-base-zh-cn luci-i18n-ttyd-zh-cn luci-i18n-package-manager-zh-cn luci-i18n-argon-zh-cn luci-theme-argon luci-i18n-argon-config-zh-cn luci-i18n-quickstart-zh-cn luci-i18n-diskman-zh-cn -libustream-mbedtls" FILES="files"
 
-      # - name: 查看目录结构
-      #   run: |
-      #     cd istoreos-imagebuilder-armsr-armv8.Linux-x86_64
-      #     tree
-      #     tree > tree.txt
-
-      # - name: Upload Artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: tree.txt
-      #     path: ./istoreos-imagebuilder-armsr-armv8.Linux-x86_64/tree.txt
 
       - name: Download and Extract RootFS
         run: |
           mkdir -p ./iStoreOS/
-          mv ./istoreos-imagebuilder-armsr-armv8.Linux-x86_64/bin/targets/armsr/armv8/istoreos-armsr-armv8-generic-rootfs.tar.gz ./iStoreOS/rootfs_arm64.tar.gz
-          gzip -d ./iStoreOS/rootfs_arm64.tar.gz
+          tree -l ./istoreos-imagebuilder-x86-64.Linux-x86_64/bin/targets/
+          if [[ "${{ matrix.platform }}" == "linux/amd64" ]]; then
+            mv ./istoreos-imagebuilder-x86-64.Linux-x86_64/bin/targets/x86-64/istoreos-x86-64-generic-rootfs.tar.gz ./iStoreOS/rootfs_amd64.tar.gz
+            gzip -d ./iStoreOS/rootfs_amd64.tar.gz
+          elif [[ "${{ matrix.platform }}" == "linux/arm64" ]]; then
+            mv ./istoreos-imagebuilder-armsr-armv8.Linux-x86_64/bin/targets/armsr/armv8/istoreos-armsr-armv8-generic-rootfs.tar.gz ./iStoreOS/rootfs_arm64.tar.gz
+            gzip -d ./iStoreOS/rootfs_arm64.tar.gz
+          fi
 
       - name: Move rootfs.tar.gz to build context
         run: |
           mkdir -p ./src/amd64 ./src/arm64
           mv ./iStoreOS/rootfs_arm64.tar ./src/arm64/rootfs.tar
+          mv ./iStoreOS/rootfs_amd64.tar ./src/amd64/rootfs.tar
 
       - name: Build Dockerfile
         run: |
-          cat <<EOF >"./src/arm64/Dockerfile"
+          cat <<EOF >"./src/${{ matrix.platform_name }}/Dockerfile"
           FROM scratch
           ADD rootfs.tar /
           EOF
@@ -163,8 +167,11 @@ jobs:
         id: build
         uses: docker/build-push-action@v4
         with:
-          context: ./src/arm64
-          file: ./src/arm64/Dockerfile
-          platforms: linux/arm64
-          tags: yexundao/istoreos:${{ steps.final_tags.outputs.tags }}-arm64
+          context: ./src/${{ matrix.platform_name }}
+          file: ./src/${{ matrix.platform_name }}/Dockerfile
+          platforms: ${{ matrix.platform }}
+          tags: |
+            yexundao/istoreos:${{ steps.final_tags.outputs.tags }}
+            yexundao/istoreos:latest-${{ matrix.platform_name }}
+            yexundao/istoreos:latest
           push: true  # 推送镜像
