@@ -116,7 +116,7 @@ jobs:
           ls -l
           pwd
           echo "复制配置文件"
-          cp -r ../src/arm/* ./
+          cp -r ../src/armsr-armv8/* ./
 
       - name: 安装工具
         run: |
@@ -149,7 +149,6 @@ jobs:
 
       - name: 移动到构建目录
         run: |
-          mkdir -p ./src/armsr-armv8
           mv ./iStoreOS/rootfs_arm64.tar ./src/armsr-armv8/rootfs.tar
 
       - name: 创建Dockerfile文件
