@@ -145,7 +145,6 @@ jobs:
       - name: 解压RootFS
         run: |
           mkdir -p ./iStoreOS/
-          tree -l ./istoreos-imagebuilder-*
           if [[ "${{ matrix.platform }}" == "linux/amd64" ]]; then
             tree -l ./istoreos-imagebuilder-x86-64.Linux-x86_64/bin/targets/
             mv ./istoreos-imagebuilder-x86-64.Linux-x86_64/bin/targets/x86-64/istoreos-x86-64-generic-rootfs.tar.gz ./iStoreOS/rootfs_amd64.tar.gz
@@ -159,6 +158,7 @@ jobs:
       - name: Move rootfs.tar.gz to build context
         run: |
           mkdir -p ./src/amd64 ./src/arm64
+          ls -l ./iStoreOS/
           mv ./iStoreOS/rootfs_arm64.tar ./src/arm64/rootfs.tar
           mv ./iStoreOS/rootfs_amd64.tar ./src/amd64/rootfs.tar
 
