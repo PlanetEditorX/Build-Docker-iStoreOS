@@ -180,8 +180,8 @@ jobs:
           file: ./src/armsr-armv8/Dockerfile
           platforms: linux/arm64
           tags: |
-            yexundao/istoreos:${{ steps.final_tags.outputs.tags }}
             yexundao/istoreos:${{ steps.final_tags.outputs.tags }}-arm
             yexundao/istoreos:latest-arm
+            yexundao/istoreos:${{ steps.final_tags.outputs.tags }}
             yexundao/istoreos:latest
           push: true  # 推送镜像
