@@ -156,7 +156,7 @@ jobs:
         run: |
           cat <<EOF >"./src/arm64/Dockerfile"
           FROM scratch
-          ADD rootfs-arm64.tar /
+          ADD rootfs.tar /
           EOF
 
       - name: Build ARM Docker image
@@ -166,5 +166,5 @@ jobs:
           context: ./src/arm64
           file: ./src/arm64/Dockerfile
           platforms: linux/arm64
-          tags: istoreos:initial-arm64
+          tags: ${{ steps.final_tags.outputs.tags }}-arm64
           push: true  # 推送镜像
