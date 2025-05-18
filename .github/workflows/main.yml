@@ -1,7 +1,7 @@
 name: Build Docker iStoreOS
 
 on:
-  push:
+  # push:
   schedule:
     - cron: '0 10 * * 1'  # 每周一的上午10点（UTC时间，对应北京时间下午6点）
   workflow_dispatch:
@@ -108,9 +108,9 @@ jobs:
         if: ${{ github.event.inputs.local_image == 'true' }}
         run: |
           if [[ "${{ matrix.platform }}" == "linux/amd64" ]]; then
-            cp ./src/images/istoreos-imagebuilder-x86-64.Linux-x86_64.tar.zst ./
+            wget https://github.com/PlanetEditorX/Build-Docker-iStoreOS/raw/refs/heads/main/src/images/istoreos-imagebuilder-x86-64.Linux-x86_64.tar.zst
           elif [[ "${{ matrix.platform }}" == "linux/arm64" ]]; then
-            cp ./src/images/istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst ./
+            wget https://github.com/PlanetEditorX/Build-Docker-iStoreOS/raw/refs/heads/main/src/images/istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst
           fi
           echo "解压文件"
           ls -l
