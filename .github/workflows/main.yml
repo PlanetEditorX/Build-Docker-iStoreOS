@@ -19,11 +19,11 @@ on:
         required: false
         default: ''
       local_image:
-        description: '使用本地镜像'
+        description: '使用仓库构建文件'
         required: false
         default: false
         type: boolean
-        
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -106,7 +106,7 @@ jobs:
           echo "输出配置"
           cat $CONFIG_PATH
 
-      - name: 使用本地构建文件
+      - name: 使用仓库构建文件
         if: ${{ github.event.inputs.local_image == 'true' }}
         run: |
           wget https://github.com/PlanetEditorX/Build-Docker-iStoreOS/raw/refs/heads/main/src/images/istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst
