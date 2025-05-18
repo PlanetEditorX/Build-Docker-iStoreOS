@@ -29,6 +29,66 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Get version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+      - name: Get latest Docker tag
+        run: |
+          # 通过page=2&page_size=1限制获取最新版本号，page=1&page_size=1为latest，page=2&page_size=1为X.Y.Z-c/python
+          TAGS_URL="https://registry.hub.docker.com/v2/namespaces/${{ secrets.DOCKER_USERNAME }}/repositories/istoreos/tags?page=2&page_size=1"
+          TAGS_RESPONSE=$(curl -s $TAGS_URL)
+          if ! jq -e '.results[].name' <<< "$TAGS_RESPONSE" &>/dev/null; then
+              # 新的仓库默认
+              LATEST_TAG="0.9.9"
+          else
+              LATEST_TAG=$(echo "$TAGS_RESPONSE" | jq -r '.results[].name' | sort -V | tail -n1 | awk -F'-' '{print $1}')
+          fi
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+
+      - name: Increment version
+        run: |
+          # 读取最新版本号并分割为数组
+          IFS='.' read -r major minor patch <<< $LATEST_TAG
+          # 递增补丁版本号
+          patch=$((patch + 1))
+          # 如果补丁版本号达到10，重置为0并递增次版本号
+          if [ $patch -eq 10 ]; then
+              patch=0
+              minor=$((minor + 1))
+              # 如果次版本号达到10，重置为0并递增主版本号
+              if [ $minor -eq 10 ]; then
+                  minor=0
+                  major=$((major + 1))
+              fi
+          fi
+          # 构造新版本号
+          NEW_VERSION="$major.$minor.$patch"
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+
+      - name: Show New Version
+        run: echo $NEW_VERSION
+
+      - name: Use tags or version
+        id: final_tags
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "tags=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.get_version.outputs.VERSION }}" != "" ] && [ "${{ steps.get_version.outputs.VERSION }}" != "refs/heads/main" ]; then
+            echo "tags=${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+          else
+            echo "tags=$NEW_VERSION" >> $GITHUB_OUTPUT
+          fi
+
       - name: 下载构建文件
         run: |
           wget https://fw0.koolcenter.com/iStoreOS/alpha/24.10/ib/armsr/istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst
@@ -69,16 +129,44 @@ jobs:
           cd istoreos-imagebuilder-armsr-armv8.Linux-x86_64
           make image PROFILE=generic PACKAGES="luci luci-i18n-homeproxy-zh-cn luci-i18n-passwall-zh-cn iptables iptables-mod-tproxy iptables-mod-socket iptables-mod-iprange iptables-mod-conntrack-extra kmod-ipt-nat kmod-nft-socket kmod-nft-tproxy hysteria sing-box geoview xray-core luci-app-openclash luci-i18n-firewall-zh-cn luci-app-filetransfer luci-i18n-linkease-zh-cn luci-i18n-base-zh-cn luci-i18n-ttyd-zh-cn luci-i18n-package-manager-zh-cn luci-i18n-argon-zh-cn luci-theme-argon luci-i18n-argon-config-zh-cn luci-i18n-quickstart-zh-cn luci-i18n-diskman-zh-cn -libustream-mbedtls" FILES="files"
 
-      - name: 查看目录结构
+      # - name: 查看目录结构
+      #   run: |
+      #     cd istoreos-imagebuilder-armsr-armv8.Linux-x86_64
+      #     tree
+      #     tree > tree.txt
+
+      # - name: Upload Artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: tree.txt
+      #     path: ./istoreos-imagebuilder-armsr-armv8.Linux-x86_64/tree.txt
+
+      - name: Download and Extract RootFS
         run: |
-          cd istoreos-imagebuilder-armsr-armv8.Linux-x86_64
-          tree
-          tree > tree.txt
+          mkdir -p iSoreOS
+          mv ./istoreos-imagebuilder-armsr-armv8.Linux-x86_64/bin/targets/armsr/armv8/istoreos-armsr-armv8-generic-rootfs.tar.gz ./iStoreOS/rootfs_arm64.tar.gz
+          cd iSoreOS
+          gzip -d rootfs_arm64.tar.gz
+          ls -l
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+      - name: Move rootfs.tar.gz to build context
+        run: |
+          mkdir -p ./src/amd64 ./src/arm64
+          mv iStoreOS/rootfs_arm64.tar ./src/arm64/rootfs.tar
+
+      - name: Build Dockerfile
+        run: |
+          cat <<EOF >"./src/arm64/Dockerfile"
+          FROM scratch
+          ADD rootfs-arm64.tar /
+          EOF
+
+      - name: Build ARM Docker image
+        id: build
+        uses: docker/build-push-action@v4
         with:
-          name: tree.txt
-          path: ./istoreos-imagebuilder-armsr-armv8.Linux-x86_64/tree.txt
-
-
+          context: ./src/arm64
+          file: ./src/arm64/Dockerfile
+          platforms: linux/arm64
+          tags: istoreos:initial-arm64
+          push: true  # 推送镜像
