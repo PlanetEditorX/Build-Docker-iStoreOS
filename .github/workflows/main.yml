@@ -145,13 +145,12 @@ jobs:
         run: |
           mkdir -p ./iStoreOS/
           mv ./istoreos-imagebuilder-armsr-armv8.Linux-x86_64/bin/targets/armsr/armv8/istoreos-armsr-armv8-generic-rootfs.tar.gz ./iStoreOS/rootfs_arm64.tar.gz
-          gzip -d rootfs_arm64.tar.gz
-          ls -l
+          gzip -d ./iStoreOS/rootfs_arm64.tar.gz
 
       - name: Move rootfs.tar.gz to build context
         run: |
           mkdir -p ./src/amd64 ./src/arm64
-          mv iStoreOS/rootfs_arm64.tar ./src/arm64/rootfs.tar
+          mv ./iStoreOS/rootfs_arm64.tar ./src/arm64/rootfs.tar
 
       - name: Build Dockerfile
         run: |
