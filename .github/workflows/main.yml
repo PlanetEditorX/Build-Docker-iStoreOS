@@ -166,5 +166,5 @@ jobs:
           context: ./src/arm64
           file: ./src/arm64/Dockerfile
           platforms: linux/arm64
-          tags: ${{ steps.final_tags.outputs.tags }}-arm64
+          tags: yexundao/istoreos:${{ steps.final_tags.outputs.tags }}-arm64
           push: true  # 推送镜像
