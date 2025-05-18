@@ -1,10 +1,10 @@
 # Build-Docker-iStoreOS
-构建docker版iStoreOS
+- 构建docker版iStoreOS
 
 # 命令参考构建docker版immortalwrt
 ## 👉[immortalwrt](https://github.com/PlanetEditorX/immortalwrt)
 
-# 适配
+# 适配情况
 ## Armbian版本docker
 - 正常运行
 ## x86版本docker
@@ -19,3 +19,6 @@
   ```bash
   docker run --name iStoreOS -d --network macnet --privileged --restart=always yexundao/istoreos:latest /sbin/init
   ```
+
+# 感谢
+- [悟空](https://wkdaily.cpolar.top/archives/24)
