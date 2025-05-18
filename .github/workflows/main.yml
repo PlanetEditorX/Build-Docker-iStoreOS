@@ -102,7 +102,11 @@ jobs:
       - name: 下载构建文件
         run: |
           echo "下载文件"
-          wget https://fw0.koolcenter.com/iStoreOS/alpha/24.10/ib/${{ matrix.platform_name }}/istoreos-imagebuilder-${{ matrix.platform_name }}.Linux-x86_64.tar.zst
+          if [[ "${{ matrix.platform }}" == "linux/amd64" ]]; then
+            wget https://fw0.koolcenter.com/iStoreOS/alpha/24.10/ib/x86_64/istoreos-imagebuilder-x86-64.Linux-x86_64.tar.zst
+          elif [[ "${{ matrix.platform }}" == "linux/arm64" ]]; then
+            wget https://fw0.koolcenter.com/iStoreOS/alpha/24.10/ib/armsr/istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst
+          fi
           echo "解压文件"
           zstd -d -c istoreos-imagebuilder-${{ matrix.platform_name }}.Linux-x86_64.tar.zst | tar -xvf -
 
