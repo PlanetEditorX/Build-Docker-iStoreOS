@@ -89,6 +89,17 @@ jobs:
             echo "tags=$NEW_VERSION" >> $GITHUB_OUTPUT
           fi
 
+      - name: 设置IP和网关
+        run: |
+          echo "当前网络配置路径"
+          CONFIG_PATH="./src/armsr-armv8/files/etc/uci-defaults/99-custom.sh"
+          echo $CONFIG_PATH
+          echo "替换默认配置"
+          sed -i "s/192.168.1.100/${{ github.event.inputs.ipaddr }}/g" "$CONFIG_PATH"
+          sed -i "s/192.168.1.1/${{ github.event.inputs.gateway }}/g" "$CONFIG_PATH"
+          echo "输出配置"
+          cat $CONFIG_PATH
+
       - name: 下载构建文件
         run: |
           wget https://fw0.koolcenter.com/iStoreOS/alpha/24.10/ib/armsr/istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst
@@ -154,5 +165,9 @@ jobs:
           context: ./src/arm64
           file: ./src/arm64/Dockerfile
           platforms: linux/arm64
-          tags: yexundao/istoreos:${{ steps.final_tags.outputs.tags }}-arm64
+          tags: |
+            yexundao/istoreos:${{ steps.final_tags.outputs.tags }}
+            yexundao/istoreos:${{ steps.final_tags.outputs.tags }}-arm
+            yexundao/istoreos:latest-arm
+            yexundao/istoreos:latest
           push: true  # 推送镜像

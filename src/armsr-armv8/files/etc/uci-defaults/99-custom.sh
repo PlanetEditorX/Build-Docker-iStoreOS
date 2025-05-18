@@ -1,28 +1,33 @@
+
 #!/bin/sh
-# 99-custom.sh 就是固件首次启动时运行的脚本 位于固件内的/etc/uci-defaults/99-custom.sh
-# Log file for debugging
+# 固件首次启动时运行的配置脚本
 LOGFILE="/tmp/uci-defaults-log.txt"
 echo "Starting 99-custom.sh at $(date)" >> $LOGFILE
-# 设置默认防火墙规则，方便虚拟机首次访问 WebUI
+
+# 防火墙规则（允许LAN区访问）
 uci set firewall.@zone[1].input='ACCEPT'
 
+# 系统配置
 uci set system.@system[0].hostname='iStoreOS'
 uci commit system
 
-
-# 设置主机名映射，解决安卓原生 TV 无法联网的问题
+# 安卓NTP域名映射
 uci add dhcp domain
 uci set "dhcp.@domain[-1].name=time.android.com"
 uci set "dhcp.@domain[-1].ip=203.107.6.88"
 
-# 设置所有网口可访问网页终端
-uci delete ttyd.@ttyd[0].interface
+# 服务访问控制
+uci delete ttyd.@ttyd[0].interface  # 允许所有接口访问网页终端
+uci set dropbear.@dropbear[0].Interface=''  # 允许所有接口SSH连接
 
-# 设置所有网口可连接 SSH
-uci set dropbear.@dropbear[0].Interface=''
-uci commit
+# 网络配置
+uci set network.lan.proto='static'
+uci set network.lan.ipaddr='192.168.1.100'
+uci set network.lan.netmask='255.255.255.0'
+uci set network.lan.gateway='192.168.1.1'
+uci commit network
 
-# 设置编译作者信息
+# 编译信息修改
 FILE_PATH="/etc/openwrt_release"
 NEW_DESCRIPTION="Compiled by PlanetEditorX"
 sed -i "s/DISTRIB_DESCRIPTION='[^']*'/DISTRIB_DESCRIPTION='$NEW_DESCRIPTION'/" "$FILE_PATH"

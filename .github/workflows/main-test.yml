@@ -1,4 +1,4 @@
-name: Build Docker iStoreOS amd_arm
+name: Build Docker iStoreOS Test
 
 on:
   # push:
