@@ -65,6 +65,7 @@ jobs:
 
       - name: 构建rootfs文件
         run: |
+          cd istoreos-imagebuilder-armsr-armv8.Linux-x86_64
           make image PROFILE=generic PACKAGES="luci luci-i18n-homeproxy-zh-cn luci-i18n-passwall-zh-cn iptables iptables-mod-tproxy iptables-mod-socket iptables-mod-iprange iptables-mod-conntrack-extra kmod-ipt-nat kmod-nft-socket kmod-nft-tproxy hysteria sing-box geoview xray-core luci-app-openclash luci-i18n-firewall-zh-cn luci-app-filetransfer luci-i18n-linkease-zh-cn luci-i18n-base-zh-cn luci-i18n-ttyd-zh-cn luci-i18n-package-manager-zh-cn luci-i18n-argon-zh-cn luci-theme-argon luci-i18n-argon-config-zh-cn luci-i18n-quickstart-zh-cn luci-i18n-diskman-zh-cn -libustream-mbedtls" FILES="files"
 
 
