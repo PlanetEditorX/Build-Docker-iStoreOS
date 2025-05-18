@@ -142,7 +142,7 @@ jobs:
           make image PROFILE=generic PACKAGES="luci luci-i18n-homeproxy-zh-cn luci-i18n-passwall-zh-cn iptables iptables-mod-tproxy iptables-mod-socket iptables-mod-iprange iptables-mod-conntrack-extra kmod-ipt-nat kmod-nft-socket kmod-nft-tproxy hysteria sing-box geoview xray-core luci-app-openclash luci-i18n-firewall-zh-cn luci-app-filetransfer luci-i18n-linkease-zh-cn luci-i18n-base-zh-cn luci-i18n-ttyd-zh-cn luci-i18n-package-manager-zh-cn luci-i18n-argon-zh-cn luci-theme-argon luci-i18n-argon-config-zh-cn luci-i18n-quickstart-zh-cn luci-i18n-diskman-zh-cn -libustream-mbedtls" FILES="files"
 
 
-      - name: Download and Extract RootFS
+      - name: 解压RootFS
         run: |
           mkdir -p ./iStoreOS/
           if [[ "${{ matrix.platform }}" == "linux/amd64" ]]; then
@@ -150,7 +150,7 @@ jobs:
             mv ./istoreos-imagebuilder-x86-64.Linux-x86_64/bin/targets/x86-64/istoreos-x86-64-generic-rootfs.tar.gz ./iStoreOS/rootfs_amd64.tar.gz
             gzip -d ./iStoreOS/rootfs_amd64.tar.gz
           elif [[ "${{ matrix.platform }}" == "linux/arm64" ]]; then
-            tree -l ./istoreos-imagebuilder-armv8.Linux-x86_64/bin/targets/
+            tree -l ./istoreos-imagebuilder-armsr-armv8.Linux-x86_64/bin/targets/
             mv ./istoreos-imagebuilder-armsr-armv8.Linux-x86_64/bin/targets/armsr/armv8/istoreos-armsr-armv8-generic-rootfs.tar.gz ./iStoreOS/rootfs_arm64.tar.gz
             gzip -d ./iStoreOS/rootfs_arm64.tar.gz
           fi
