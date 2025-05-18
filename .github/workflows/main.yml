@@ -113,6 +113,7 @@ jobs:
             cp ./src/images/istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst ./
           fi
           echo "解压文件"
+          ls -l
           zstd -d -c istoreos-imagebuilder-${{ matrix.platform_name }}.Linux-x86_64.tar.zst | tar -xvf -
 
       - name: 下载构建文件
