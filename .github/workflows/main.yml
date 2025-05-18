@@ -18,6 +18,11 @@ on:
         description: '输入版本号,格式为X.Y.Z,为空则版本号加1'
         required: false
         default: ''
+      local_image:
+        description: '使用本地镜像'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -99,7 +104,19 @@ jobs:
             echo "tags=$NEW_VERSION" >> $GITHUB_OUTPUT
           fi
 
+      - name: 使用本地构建文件
+        if: ${{ github.event.inputs.local_image == 'true' }}
+        run: |
+          if [[ "${{ matrix.platform }}" == "linux/amd64" ]]; then
+            cp ./src/images/istoreos-imagebuilder-x86-64.Linux-x86_64.tar.zst ./
+          elif [[ "${{ matrix.platform }}" == "linux/arm64" ]]; then
+            cp ./src/images/istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst ./
+          fi
+          echo "解压文件"
+          zstd -d -c istoreos-imagebuilder-${{ matrix.platform_name }}.Linux-x86_64.tar.zst | tar -xvf -
+
       - name: 下载构建文件
+        if: ${{ github.event.inputs.local_image == 'false' }}
         run: |
           echo "下载文件"
           if [[ "${{ matrix.platform }}" == "linux/amd64" ]]; then
