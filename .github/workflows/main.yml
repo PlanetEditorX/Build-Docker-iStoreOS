@@ -1,0 +1,158 @@
+name: Build Docker iStoreOS
+
+on:
+  # push:
+  schedule:
+    - cron: '0 10 * * 1'  # 每周一的上午10点（UTC时间，对应北京时间下午6点）
+  workflow_dispatch:
+    inputs:
+      ipaddr:
+        description: '输入管理IP'
+        required: true
+        default: '192.168.1.100'
+      gateway:
+        description: '输入默认网关'
+        required: true
+        default: '192.168.1.1'
+      version:
+        description: '输入版本号,格式为X.Y.Z,为空则版本号加1'
+        required: false
+        default: ''
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Get version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+      - name: Get latest Docker tag
+        run: |
+          # 通过page=2&page_size=1限制获取最新版本号，page=1&page_size=1为latest，page=2&page_size=1为X.Y.Z-c/python
+          TAGS_URL="https://registry.hub.docker.com/v2/namespaces/${{ secrets.DOCKER_USERNAME }}/repositories/istoreos/tags?page=2&page_size=1"
+          TAGS_RESPONSE=$(curl -s $TAGS_URL)
+          if ! jq -e '.results[].name' <<< "$TAGS_RESPONSE" &>/dev/null; then
+              # 新的仓库默认
+              LATEST_TAG="0.9.9"
+          else
+              LATEST_TAG=$(echo "$TAGS_RESPONSE" | jq -r '.results[].name' | sort -V | tail -n1 | awk -F'-' '{print $1}')
+          fi
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+
+      - name: Increment version
+        run: |
+          # 读取最新版本号并分割为数组
+          IFS='.' read -r major minor patch <<< $LATEST_TAG
+          # 递增补丁版本号
+          patch=$((patch + 1))
+          # 如果补丁版本号达到10，重置为0并递增次版本号
+          if [ $patch -eq 10 ]; then
+              patch=0
+              minor=$((minor + 1))
+              # 如果次版本号达到10，重置为0并递增主版本号
+              if [ $minor -eq 10 ]; then
+                  minor=0
+                  major=$((major + 1))
+              fi
+          fi
+          # 构造新版本号
+          NEW_VERSION="$major.$minor.$patch"
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+
+      - name: Show New Version
+        run: echo $NEW_VERSION
+
+      - name: Use tags or version
+        id: final_tags
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "tags=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.get_version.outputs.VERSION }}" != "" ] && [ "${{ steps.get_version.outputs.VERSION }}" != "refs/heads/main" ]; then
+            echo "tags=${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+          else
+            echo "tags=$NEW_VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 下载构建文件
+        run: |
+          wget https://fw0.koolcenter.com/iStoreOS/alpha/24.10/ib/armsr/istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst
+          echo "解压文件"
+          zstd -d -c istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst | tar -xvf -
+          # wget https://fw0.koolcenter.com/iStoreOS/alpha/24.10/ib/x86_64/istoreos-imagebuilder-x86-64.Linux-x86_64.tar.zst
+
+      - name: 设置文件
+        run: |
+          cd istoreos-imagebuilder-armsr-armv8.Linux-x86_64
+          echo "生成rootfs.tar.gz配置"
+          sed -i 's/# CONFIG_TARGET_ROOTFS_TARGZ is not set/CONFIG_TARGET_ROOTFS_TARGZ=y/' .config
+          ls -l
+          pwd
+          echo "复制配置文件"
+          cp -r ../src/arm/* ./
+
+      - name: 安装工具
+        run: |
+          sudo apt update
+          sudo apt install build-essential \
+                gawk \
+                unzip \
+                libncurses5-dev \
+                zlib1g-dev \
+                libssl-dev \
+                python3-lib2to3 \
+                python3-venv \
+                wget \
+                curl \
+                rsync \
+                subversion \
+                git \
+                tree
+
+      - name: 构建rootfs文件
+        run: |
+          cd istoreos-imagebuilder-armsr-armv8.Linux-x86_64
+          make image PROFILE=generic PACKAGES="luci luci-i18n-homeproxy-zh-cn luci-i18n-passwall-zh-cn iptables iptables-mod-tproxy iptables-mod-socket iptables-mod-iprange iptables-mod-conntrack-extra kmod-ipt-nat kmod-nft-socket kmod-nft-tproxy hysteria sing-box geoview xray-core luci-app-openclash luci-i18n-firewall-zh-cn luci-app-filetransfer luci-i18n-linkease-zh-cn luci-i18n-base-zh-cn luci-i18n-ttyd-zh-cn luci-i18n-package-manager-zh-cn luci-i18n-argon-zh-cn luci-theme-argon luci-i18n-argon-config-zh-cn luci-i18n-quickstart-zh-cn luci-i18n-diskman-zh-cn -libustream-mbedtls" FILES="files"
+
+      - name: Download and Extract RootFS
+        run: |
+          mkdir -p ./iStoreOS/
+          mv ./istoreos-imagebuilder-armsr-armv8.Linux-x86_64/bin/targets/armsr/armv8/istoreos-armsr-armv8-generic-rootfs.tar.gz ./iStoreOS/rootfs_arm64.tar.gz
+          gzip -d ./iStoreOS/rootfs_arm64.tar.gz
+
+      - name: Move rootfs.tar.gz to build context
+        run: |
+          mkdir -p ./src/amd64 ./src/arm64
+          mv ./iStoreOS/rootfs_arm64.tar ./src/arm64/rootfs.tar
+
+      - name: Build Dockerfile
+        run: |
+          cat <<EOF >"./src/arm64/Dockerfile"
+          FROM scratch
+          ADD rootfs.tar /
+          EOF
+
+      - name: Build ARM Docker image
+        id: build
+        uses: docker/build-push-action@v4
+        with:
+          context: ./src/arm64
+          file: ./src/arm64/Dockerfile
+          platforms: linux/arm64
+          tags: yexundao/istoreos:${{ steps.final_tags.outputs.tags }}-arm64
+          push: true  # 推送镜像
