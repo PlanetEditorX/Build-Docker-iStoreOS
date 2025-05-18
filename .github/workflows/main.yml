@@ -24,7 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [linux/amd64, linux/arm64]
+        # platform: [linux/amd64, linux/arm64]
+        platform: [linux/arm64]
         include:
           - platform: linux/amd64
             dockerfile: ./src/amd64/Dockerfile
@@ -145,11 +146,12 @@ jobs:
       - name: Download and Extract RootFS
         run: |
           mkdir -p ./iStoreOS/
-          tree -l ./istoreos-imagebuilder-x86-64.Linux-x86_64/bin/targets/
           if [[ "${{ matrix.platform }}" == "linux/amd64" ]]; then
+            tree -l ./istoreos-imagebuilder-x86-64.Linux-x86_64/bin/targets/
             mv ./istoreos-imagebuilder-x86-64.Linux-x86_64/bin/targets/x86-64/istoreos-x86-64-generic-rootfs.tar.gz ./iStoreOS/rootfs_amd64.tar.gz
             gzip -d ./iStoreOS/rootfs_amd64.tar.gz
           elif [[ "${{ matrix.platform }}" == "linux/arm64" ]]; then
+            tree -l ./istoreos-imagebuilder-armv8.Linux-x86_64/bin/targets/
             mv ./istoreos-imagebuilder-armsr-armv8.Linux-x86_64/bin/targets/armsr/armv8/istoreos-armsr-armv8-generic-rootfs.tar.gz ./iStoreOS/rootfs_arm64.tar.gz
             gzip -d ./iStoreOS/rootfs_arm64.tar.gz
           fi
